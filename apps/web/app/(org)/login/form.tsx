@@ -18,6 +18,7 @@ import { signIn } from "next-auth/react";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getOrganizationSSOData } from "@/actions/organization/get-organization-sso-data";
+import { checkEmailAllowed } from "@/actions/auth/check-email-allowed";
 import { trackEvent } from "@/app/utils/analytics";
 import { usePublicEnv } from "@/utils/public-env";
 
@@ -275,6 +276,18 @@ export function LoginForm() {
 												auth_surface: "login",
 											});
 											const normalizedEmail = email.trim().toLowerCase();
+
+											const { allowed, reason } =
+												await checkEmailAllowed(normalizedEmail);
+											if (!allowed) {
+												setLoading(false);
+												toast.error(
+													reason ??
+														"This email is not authorized to sign in.",
+												);
+												return;
+											}
+
 											signIn("email", {
 												email: normalizedEmail,
 												redirect: false,
@@ -301,9 +314,6 @@ export function LoginForm() {
 														});
 														router.push(`/verify-otp?${params.toString()}`);
 													} else {
-														// NextAuth always returns "EmailSignin" for all email provider errors
-														// Since we already check rate limiting on the client side before sending,
-														// if we get an error here, it's likely rate limiting from the server
 														toast.error(
 															"Please wait 30 seconds before requesting a new code",
 														);
