@@ -12,6 +12,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm i --fro
 
 ARG NEXT_PUBLIC_DOCKER_BUILD=true
 ENV NEXT_PUBLIC_WEB_URL=http://localhost:3000
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 RUN pnpm run build:web
 
