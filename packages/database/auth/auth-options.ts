@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { serverEnv } from "@cap/env";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession as _getServerSession } from "next-auth";
 import type { Adapter } from "next-auth/adapters";
@@ -10,8 +10,7 @@ import type { Provider } from "next-auth/providers/index";
 import WorkOSProvider from "next-auth/providers/workos";
 import { sendEmail } from "../emails/config.ts";
 import { db } from "../index.ts";
-import { users } from "../schema.ts";
-import { isEmailAllowedForSignup } from "./domain-utils.ts";
+import { organizationInvites, users } from "../schema.ts";
 import { DrizzleAdapter } from "./drizzle-adapter.ts";
 
 export const maxDuration = 120;
@@ -119,9 +118,6 @@ export const authOptions = (): NextAuthOptions => {
 		},
 		callbacks: {
 			async signIn({ user, email, credentials }) {
-				const allowedDomains = serverEnv().CAP_ALLOWED_SIGNUP_DOMAINS;
-				if (!allowedDomains) return true;
-
 				const rawEmail =
 					user?.email ||
 					(typeof email === "string"
@@ -129,25 +125,39 @@ export const authOptions = (): NextAuthOptions => {
 						: typeof credentials?.email === "string"
 							? credentials.email
 							: null);
-				if (!rawEmail || typeof rawEmail !== "string") return true;
+				if (!rawEmail || typeof rawEmail !== "string") return false;
 				const userEmail = rawEmail.toLowerCase();
 
 				const [existingUser] = await db()
-					.select()
+					.select({ id: users.id })
 					.from(users)
 					.where(eq(users.email, userEmail))
 					.limit(1);
 
-				// Only apply domain restrictions for new users, existing ones can always sign in
-				if (
-					!existingUser &&
-					!isEmailAllowedForSignup(userEmail, allowedDomains)
-				) {
-					console.warn(`Signup blocked for email domain: ${userEmail}`);
-					return false;
-				}
+				if (existingUser) return true;
 
-				return true;
+				const [anyUser] = await db()
+					.select({ id: users.id })
+					.from(users)
+					.limit(1);
+
+				if (!anyUser) return true;
+
+				const [pendingInvite] = await db()
+					.select({ id: organizationInvites.id })
+					.from(organizationInvites)
+					.where(
+						and(
+							eq(organizationInvites.invitedEmail, userEmail),
+							eq(organizationInvites.status, "pending"),
+						),
+					)
+					.limit(1);
+
+				if (pendingInvite) return true;
+
+				console.warn(`Sign-in blocked for unregistered email: ${userEmail}`);
+				return false;
 			},
 			async session({ token, session }) {
 				if (!session.user) return session;
