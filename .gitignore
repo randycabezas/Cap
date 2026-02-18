@@ -71,3 +71,7 @@ analysis/
 analysis/plans/
 .ralphy
 tmp/
+sync-upstream.sh
+update.sh
+check-updates.sh
+cap-update-check-n8n.json
