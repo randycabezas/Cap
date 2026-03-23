@@ -26,6 +26,11 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function toS4ProxyUrl(signedUrl: string): string {
+	const url = new URL(signedUrl);
+	return `${serverEnv().WEB_URL}/s4-video/${url.hostname}${url.pathname}${url.search}`;
+}
+
 const GetPlaylistParams = Schema.Struct({
 	videoId: Video.VideoId,
 	videoType: Schema.Literal("video", "audio", "master", "mp4", "raw-preview"),
@@ -118,8 +123,10 @@ const getPlaylistResponse = (
 			else if (video.source.type === "MediaConvert")
 				redirect = `${video.ownerId}/${video.id}/output/video_recording_000.m3u8`;
 
+			const isMp4Redirect = isMp4Source || urlParams.videoType === "mp4";
+			const signedUrl = yield* s3.getSignedObjectUrl(redirect);
 			return HttpServerResponse.redirect(
-				yield* s3.getSignedObjectUrl(redirect),
+				isMp4Redirect ? toS4ProxyUrl(signedUrl) : signedUrl,
 			);
 		}
 
@@ -192,7 +199,11 @@ const getPlaylistResponse = (
 				);
 				return yield* s3
 					.getSignedObjectUrl(`${video.ownerId}/${video.id}/result.mp4`)
-					.pipe(Effect.map(HttpServerResponse.redirect));
+					.pipe(
+						Effect.map((url) =>
+							HttpServerResponse.redirect(toS4ProxyUrl(url)),
+						),
+					);
 			}
 
 			if (urlParams.videoType === "master") {
