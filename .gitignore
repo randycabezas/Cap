@@ -82,5 +82,6 @@ tmp/
 sync-upstream.sh
 update.sh
 check-updates.sh
+review-changes.sh
 cap-update-check-n8n.json
 >>>>>>> 8fb9cffeb (Increase Node heap limit for Docker build and update gitignore)

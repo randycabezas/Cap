@@ -14,6 +14,7 @@ ARG NEXT_PUBLIC_DOCKER_BUILD=true
 ENV NEXT_PUBLIC_WEB_URL=http://localhost:3000
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
+RUN npx --yes update-browserslist-db@latest
 RUN pnpm run build:web
 
 
