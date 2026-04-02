@@ -74,4 +74,5 @@ tmp/
 sync-upstream.sh
 update.sh
 check-updates.sh
+review-changes.sh
 cap-update-check-n8n.json
