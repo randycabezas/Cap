@@ -77,3 +77,10 @@ analysis/
 analysis/plans/
 .ralphy
 tmp/
+<<<<<<< HEAD
+=======
+sync-upstream.sh
+update.sh
+check-updates.sh
+cap-update-check-n8n.json
+>>>>>>> 8fb9cffeb (Increase Node heap limit for Docker build and update gitignore)
